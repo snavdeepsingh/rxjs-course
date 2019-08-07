@@ -6,6 +6,7 @@ import * as moment from 'moment';
 import {fromEvent} from 'rxjs';
 import {concatMap, distinctUntilChanged, exhaustMap, filter, mergeMap} from 'rxjs/operators';
 import {fromPromise} from 'rxjs/internal-compatibility';
+import { saveCourse } from '../../../server/save-course.route';
 
 @Component({
     selector: 'course-dialog',
@@ -39,8 +40,32 @@ export class CourseDialogComponent implements OnInit, AfterViewInit {
 
     ngOnInit() {
 
+        this.form.valueChanges
+        .pipe(
+            filter(() => this.form.valid),
+            concatMap(changes => this.saveCourse(changes))
+            // mergeMap(changes => this.saveCourse(changes))
+        )
+        .subscribe()
+
+        fromEvent(this.saveButton.nativeElement, 'click')
+            .pipe(
+                // exhaustMap, Map to inner observable, ignore other values until that observable completes.
+                exhaustMap(() => this.saveCourse(this.form.value))
+            )
+            .subscribe();
 
 
+    }
+
+    saveCourse(changes){
+        return fromPromise(fetch(`api/courses/${this.course.id}`, {
+            method: 'PUT',
+            body: JSON.stringify(changes),
+            headers: {
+                'content-type': 'application/json'
+            }
+        }))
     }
 
 
